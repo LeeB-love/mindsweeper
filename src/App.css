@@ -17,6 +17,11 @@ ol, ul {
   margin-bottom: 10px;
 }
 
+.board-container{
+  display: flexbox;
+
+}
+
 .square {
   background: #fff;
   border: 1px solid #999;
@@ -47,6 +52,13 @@ ol, ul {
   width: 34px;
 }
 
+.b{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
 .timer{
   margin-left: 30px;
 }
@@ -56,17 +68,15 @@ ol, ul {
 }
 
 .btn-ending{
+  margin-left: 300px;
   margin-top: 5px;
 }
 
-.board-container{
-  width: 350px;
-  display: inline-block;
-}
 
 .btn-face{
   margin-bottom: 20px;
 }
+
 
 .square:focus {
   outline: none;
@@ -83,4 +93,11 @@ ol, ul {
 
 .game-info {
   margin-left: 20px;
+}
+
+.game-state-bar{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }

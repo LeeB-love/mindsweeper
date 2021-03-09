@@ -34,7 +34,7 @@ class Level_select extends Component {
       this.info.innerText=info;
 
       if(this.state.game_level === "easy"){
-        this.props.onChange(1,9,9,id,7,"easy");
+        this.props.onChange(1,9,9,id,9,"easy");
       }
       else if(this.state.game_level === "normal"){
         this.props.onChange(1,16,16,id,30,"normal");
@@ -134,28 +134,28 @@ class GameStateBar extends React.Component{
   render(){
     if(this.props.gameState == 'gameover'){
       return( 
-      <>
-        <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
-        <button className="btn-face" onClick={()=>this.props.reset()} >😭</button>
-        <Timer time={this.props.time}/>
-      </>
+        <div className='game-state-bar'>
+          <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
+          <button className="btn-face" onClick={()=>this.props.reset()} >😭</button>
+          <Timer time={this.props.time}/>
+        </div>
       )
     }
     if(this.props.gameState == 'gamewin'){
       return (
-        <>
+        <div className='game-state-bar'>
           <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
           <button className="btn-face" onClick={()=>this.props.reset()}>😊</button>
           <Timer time={this.props.time}/>
-        </>
+        </div>
       )
     }
     return (
-      <>
+      <div className='game-state-bar'>
         <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
-        <button className="btn-face">😉</button>
+        <button className="btn-face" onClick={()=>this.props.reset()}>😉</button>
         <Timer time={this.props.time}/>
-      </>
+      </div>
     )
   }
 }
@@ -164,21 +164,26 @@ class Board extends React.Component{
   constructor(props){ 
     super(props);
     this.reset();
-    console.log("생성자 확인")
   }
 
   reset(){
-    this.state = {
+    const s = {
       //1. width*height 만큼 셀 생성
       square: new Array(this.props.width*this.props.height).fill(null).map(_=>({btnClickCount:0, display:'', open:false})),
       remainMines: this.props.mine,
       unopenCell: this.props.width*this.props.height,
       remainFlags: this.props.mine,
+    };
+    this.props.gameStateChange('');
+    this.plantBombs(s, this.props.mine);
+    this.countBomb(s, this.props.width,this.props.height);
+    if(!this.state) {
+      this.state = s;
+    } else {
+      this.setState(s);
     }
-    this.plantBombs(this.props.mine);
-    this.countBomb(this.props.width,this.props.height);
-    this.timer();
-    this.forceUpdate();
+    
+    this.timer();  
   }
 
   timer=()=>{
@@ -387,7 +392,7 @@ class Board extends React.Component{
   }
 
   // createBomb() : 폭탄 하나 심기
-  createBomb = () => {
+  createBomb = (s) => {
     // min 부터 max 사이에 있는 정수 중 하나를 임의로 추출
     function getRandomInt(min, max) {
       min = Math.ceil(min);
@@ -397,60 +402,58 @@ class Board extends React.Component{
     // 폭탄의 위치 랜덤으로 뽑기
     let bombPosition = getRandomInt(0, this.props.width*this.props.height);
     // 만약에 square에 폭탄이 들어가있으면 없을 때 까지 다시 위치 뽑기
-    if(this.state.square[bombPosition].mine === true){
-      while(this.state.square[bombPosition].mine !== true){
+    if(s.square[bombPosition].mine === true){
+      while(s.square[bombPosition].mine !== true){
         bombPosition = getRandomInt(0, this.props.width*this.props.height)
       }
     }
     // square에 폭탄 삽입
-    this.state.square[bombPosition].mine=true;
+    s.square[bombPosition].mine=true;
   }
 
-  plantBombs = (n) => {
+  plantBombs = (s,n) => {
     for(let i = 0; i< n; i++){
-      this.createBomb();
+      this.createBomb(s);
     }
   }
 
   //x,y 주변 8칸 지뢰개수
-  countBomb = (width,height) => {
+  countBomb = (s,width,height) => {
     let count = 0;
     for(let y=0; y<height; y++){
       for(let x=0; x<width; x++){
-        if(this.state.square[x+width*y].mine==true){
+        if(s.square[x+width*y].mine==true){
           continue;
         }
-        if(x-1>=0 && y-1>=0 && this.state.square[(x-1)+width*(y-1)].mine == true){
+        if(x-1>=0 && y-1>=0 && s.square[(x-1)+width*(y-1)].mine == true){
           count++
         }
-        if(y-1>=0&& this.state.square[x+ width*(y-1)].mine == true){
+        if(y-1>=0&& s.square[x+ width*(y-1)].mine == true){
           count++
         }
-        if(x+1<width && y-1>=0&& this.state.square[(x+1)+width*(y-1)].mine == true){
+        if(x+1<width && y-1>=0&& s.square[(x+1)+width*(y-1)].mine == true){
           count++
         }
-        if(x-1>=0&&this.state.square[(x-1) + width*y].mine == true){
+        if(x-1>=0&&s.square[(x-1) + width*y].mine == true){
           count++
         }
-        if(x+1<width && this.state.square[(x+1) + width*y].mine == true){
+        if(x+1<width && s.square[(x+1) + width*y].mine == true){
           count++
         }
-        if(x-1>=0 && y+1<height&&this.state.square[(x-1) + width*(y+1)].mine == true){
+        if(x-1>=0 && y+1<height&&s.square[(x-1) + width*(y+1)].mine == true){
           count++
         }
-        if(y+1<height && this.state.square[x + width*(y+1)].mine == true){
+        if(y+1<height && s.square[x + width*(y+1)].mine == true){
           count++
         }
-        if(x+1<width && y+1<height && this.state.square[(x+1) + width*(y+1)].mine == true){
+        if(x+1<width && y+1<height && s.square[(x+1) + width*(y+1)].mine == true){
           count++
         }
-        this.state.square[x+width*y].number = count;
+        s.square[x+width*y].number = count;
         count=0
       }
     }
   }
-
-
 
   //Square component의 button의 출력값(value)로 i 전달
   renderSquare = (i,value)=>{
@@ -490,7 +493,7 @@ class Board extends React.Component{
             </div>);
       }
       board.push(<div key={y} className="board-row">{row}</div>);
-      }
+    }
     return (
       <div className="board-container">
         <GameStateBar
@@ -503,17 +506,16 @@ class Board extends React.Component{
           timer={(time)=>this.props.timer(time)}
           remainFlags={this.state.remainFlags}
           />
-        <div className={'b'}>
+        <div className='b'>
           {board}
         </div>
         <button
           className="btn-ending" 
-          onClick={()=>{this.props.modeChange(2); clearInterval(this.interval);}}>게임종료</button>
+          onClick={()=>{ this.props.modeChange(2); clearInterval(this.interval); this.props.saveRank()}}>게임종료</button>
       </div>
     )
   }
 }
-
 //게임판 렌더링
 class Game extends React.Component {
   constructor(props){
@@ -532,9 +534,56 @@ class Game extends React.Component {
         time={this.props.time}
         timer={(time)=>this.props.timer(time)}
         modeChange={(mode)=>this.props.modeChange(mode)}
+        id={this.props.id}
+        level={this.props.level}
+        saveRank={()=>this.props.saveRank()}
       />
       </>  
       )
+  }
+}
+
+
+class RankTable extends React.Component{
+  
+  renderContent(i, id, level, time){
+    return(
+      <tr key={i}>
+        <td>{id}</td>
+        <td>{level}</td>
+        <td>{time}</td>
+      </tr>
+    )
+  }
+  
+  render(){
+    let userRank = JSON.parse(localStorage.getItem('userRank'));
+    userRank.sort((a,b)=>{
+      return a.time < b.time ? -1 : a.time > b.time ? 1: 0;
+    })
+    console.log(userRank);
+    
+    const content=[]
+    for(let i=0; i<userRank.length;i++){
+      content.push(this.renderContent(i, userRank[i].id, userRank[i].level, userRank[i].time));
+    }
+    return(
+      <>
+      <table>
+        <thead>
+          <tr>
+            <th>id</th>
+            <th>난이도</th>
+            <th>진행시간</th>
+          </tr>
+        </thead>
+        <tbody>
+          {content}
+        </tbody>
+        
+      </table>
+      </>
+    )
   }
 }
 
@@ -545,6 +594,7 @@ class Ending extends React.Component{
         <p>아이디 : {this.props.id}</p>
         <p>난이도 : {this.props.level}</p>
         <p>게임 진행시간 : {this.props.time}</p>
+        <RankTable/>
         <button onClick={()=>this.props.modeChange(0)}>처음으로</button>
       </div>
     )  
@@ -565,6 +615,22 @@ class App extends React.Component{
       level: "",
     }
   }
+
+  num = 0;
+  userRank=[];
+  saveRank(){
+    this.num++
+    if(this.state.gameState == 'gamewin'){
+      this.userRank.push({
+        "num":this.num,
+        "id": this.state.id,
+        "level": this.state.level,
+        "time": this.state.time
+      })
+      localStorage.setItem("userRank", JSON.stringify(this.userRank));
+    }
+  }
+
   render(){
       if(this.state.mode === 0){
         return <Level_select onChange={(mode,width,height,id,mine,level)=>this.setState({mode,width,height,id,mine,level})}/>;
@@ -579,6 +645,9 @@ class App extends React.Component{
                 gameState={this.state.gameState}
                 gameStateChange={(gameState)=>this.setState({gameState})}
                 modeChange={(mode)=>this.setState({mode})}
+                id={this.state.id}
+                level={this.state.level}
+                saveRank={()=>this.saveRank()}
                 />
       }
       else if(this.state.mode === 2){
