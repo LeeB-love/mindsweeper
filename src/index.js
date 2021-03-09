@@ -34,13 +34,13 @@ class Level_select extends Component {
       this.info.innerText=info;
 
       if(this.state.game_level === "easy"){
-        this.props.onChange(1,9,9,id,7);
+        this.props.onChange(1,9,9,id,7,"easy");
       }
-      else if(this.state.game_level === "nomal"){
-        this.props.onChange(1,16,16,id,30);
+      else if(this.state.game_level === "normal"){
+        this.props.onChange(1,16,16,id,30,"normal");
       }
       else if(this.state.game_level === "hard"){
-        this.props.onChange(1,30,16,id,100);
+        this.props.onChange(1,30,16,id,100,"hard");
       }
   }
 
@@ -61,8 +61,8 @@ class Level_select extends Component {
 
                       <input type="radio" 
                         name="game_level" 
-                        value="nomal" 
-                        checked={this.state.game_level==='nomal'} 
+                        value="normal" 
+                        checked={this.state.game_level==='normal'} 
                         onChange={this.handleRadio} /> 중급 (16x16)
 
                       <input type="radio" 
@@ -106,7 +106,7 @@ class Square extends React.Component {
           onClick = { (e) => this.props.handleLeftClick(e) } //좌클릭
           onContextMenu = { (e) => this.props.handleRightClick(e) } //우클릭
           onAuxClick = { (e) => this.props.handleWheelClick(e) } //휠클릭
-          disabled={this.props.gameState == 'gameover'}
+          disabled={this.props.gameState == 'gameover' || this.props.gameState == 'gamewin'}
         >
         </button>
       );
@@ -114,39 +114,89 @@ class Square extends React.Component {
   }
 }
 
+class Timer extends React.Component{
+  render(){
+    return(
+      <span className="timer">⏱&nbsp;&nbsp;{this.props.time}</span>
+    )
+  }
+}
 
-class GameStateBtn extends React.Component{
-  
-  reset = ()=>{
-    //this.props.onChange(1,16,16,id,30);
-  } 
-  
+class FlagCounter extends React.Component{
+  render(){
+    return(
+      <span className="flag-counter">💣&nbsp;&nbsp;{this.props.remainFlags}&#x2F;{this.props.mine}</span>
+    )
+  }
+}
+
+class GameStateBar extends React.Component{
   render(){
     if(this.props.gameState == 'gameover'){
-      return <button className="btn-face" onClick={this.reset} >😭</button>
+      return( 
+      <>
+        <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
+        <button className="btn-face" onClick={()=>this.props.reset()} >😭</button>
+        <Timer time={this.props.time}/>
+      </>
+      )
     }
     if(this.props.gameState == 'gamewin'){
-      return <button className="btn-face" onClick={this.reset}>😊</button>
+      return (
+        <>
+          <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
+          <button className="btn-face" onClick={()=>this.props.reset()}>😊</button>
+          <Timer time={this.props.time}/>
+        </>
+      )
     }
-    return <button className="btn-face">😉</button>
+    return (
+      <>
+        <FlagCounter remainFlags={this.props.remainFlags} mine={this.props.mine}/>
+        <button className="btn-face">😉</button>
+        <Timer time={this.props.time}/>
+      </>
+    )
   }
 }
 
 class Board extends React.Component{
   constructor(props){ 
     super(props);
+    this.reset();
+    console.log("생성자 확인")
+  }
+
+  reset(){
     this.state = {
       //1. width*height 만큼 셀 생성
       square: new Array(this.props.width*this.props.height).fill(null).map(_=>({btnClickCount:0, display:'', open:false})),
       remainMines: this.props.mine,
       unopenCell: this.props.width*this.props.height,
+      remainFlags: this.props.mine,
     }
     this.plantBombs(this.props.mine);
     this.countBomb(this.props.width,this.props.height);
+    this.timer();
+    this.forceUpdate();
+  }
+
+  timer=()=>{
+    let time = Date.now();
+    this.interval = setInterval(()=>{
+      const dt = Date.now()-time;  
+      this.props.timer(Math.floor(dt/1000))  
+    }, 500);
   }
 
   open = (x,y) => {
-    const i =x+this.props.width*y;
+    let width = this.props.width;
+    let height = this.props.height;
+    const i =x+width*y;
+    
+    if(this.state.square[i].display == 'flag' || this.state.square[i].display == 'question'){
+      return;
+    }
 
     if(this.state.square[i].number != 0 || this.state.square[i].open == true){
       this.state.square[i].open = true;
@@ -160,22 +210,22 @@ class Board extends React.Component{
     if(y-1 >= 0){
       this.open(x, y-1);
     }
-    if(x+1<this.props.width && y-1 >=0){
+    if(x+1<width && y-1 >=0){
       this.open(x+1, y-1);
     }
     if(x-1>=0){
       this.open(x-1, y);
     }
-    if(x+1<this.props.width){
+    if(x+1<width){
       this.open(x+1, y);
     }
-    if(x-1>=0 && y+1<this.props.height){
+    if(x-1>=0&&y+1<height){
       this.open(x-1, y+1);
     }
-    if(y+1<this.props.height){
+    if(y+1<height){
       this.open(x, y+1);
     }
-    if(x+1<this.props.width && y+1<this.props.height){
+    if(x+1<width && y+1<height){
       this.open(x+1, y+1);
     }
   }
@@ -184,11 +234,12 @@ class Board extends React.Component{
   burstAllMines = (x,y,width,height)=>{
     //지뢰 밟으면 - 모든 지뢰가 다 터지도록 변경&gameState 를 gameover로 바꾸기
     let i = x+width*y
-    if(this.state.square[i].mine == true){  
+    if(this.state.square[i].mine == true && this.state.square[i].display != 'flag'){  
       for(let y=0; y<height; y++) {
         for(let x=0; x<width; x++) {
           if(this.state.square[x+width*y].mine == true){
             this.state.square[x+width*y].open = true;
+            clearInterval(this.interval);
             this.props.gameStateChange('gameover');
           }
         }
@@ -196,7 +247,6 @@ class Board extends React.Component{
     }
     this.forceUpdate();
   }
-
 
 
   handleLeftClick = (e,i) => {
@@ -209,7 +259,6 @@ class Board extends React.Component{
     if(this.state.square[i].display != 'flag'){
       this.open(x,y)
     }
-
     this.burstAllMines(x,y,width,height);
   }
   
@@ -220,17 +269,29 @@ class Board extends React.Component{
     //   square:[]
     // };
     this.setState(({square})=>{
+      //루프용 클릭 횟수 count
       square[i].btnClickCount ++;
+      
+      //1번 클릭하면 flag 보여주기
       if(square[i].btnClickCount === 1){
         square[i].display = 'flag'
+        this.state.remainFlags--;
+        
+        //깃발이랑 지뢰위치랑 일치하면 remainMines 감소시키고 remainMines가 0이 되면 게임 이김
         if(square[i].mine == true){
           this.state.remainMines--;
           if(this.state.remainMines === 0){
+            clearInterval(this.interval);
             this.props.gameStateChange('gamewin')
           }
         }
       }
       else if(square[i].btnClickCount === 2){
+          this.state.remainFlags++;
+          if(square[i].mine == true){
+            this.state.remainMines++;
+          }
+        
         square[i].display = 'question'
       }
       else if(square[i].btnClickCount === 3){
@@ -239,7 +300,6 @@ class Board extends React.Component{
       }
       return {square};
     });
-    
   }
 
   handleWheelClick = (e,i) => {
@@ -396,6 +456,7 @@ class Board extends React.Component{
   renderSquare = (i,value)=>{
     return (
       <Square 
+      i={i}
       value={value}
       gameState={this.props.gameState}
       remainMines={this.state.remainMines}
@@ -431,43 +492,62 @@ class Board extends React.Component{
       board.push(<div key={y} className="board-row">{row}</div>);
       }
     return (
-      <div
-      className={'b'}
-      // onClick={()=>{
-        // this.countBomb(this.props.width,this.props.height);
-        // this.forceUpdate()
-      // }}
-      >
-        {board}
+      <div className="board-container">
+        <GameStateBar
+          width={this.props.width} 
+          height={this.props.height}  
+          gameState={this.props.gameState}
+          mine={this.props.mine}
+          reset={()=>this.reset()}
+          time={this.props.time}
+          timer={(time)=>this.props.timer(time)}
+          remainFlags={this.state.remainFlags}
+          />
+        <div className={'b'}>
+          {board}
+        </div>
+        <button
+          className="btn-ending" 
+          onClick={()=>{this.props.modeChange(2); clearInterval(this.interval);}}>게임종료</button>
       </div>
     )
   }
 }
 
-
-
 //게임판 렌더링
 class Game extends React.Component {
   constructor(props){
     super(props);
-    this.state  = {
-    }
   }
+
   render() {
       return (
       <>
-      <GameStateBtn 
-        gameState={this.props.gameState}
-        mine={this.props.mine}/>
       <Board 
         width={this.props.width} 
         height={this.props.height} 
         mine={this.props.mine}
         gameState={this.props.gameState}
         gameStateChange={(gameState)=>this.props.gameStateChange(gameState)}
+        time={this.props.time}
+        timer={(time)=>this.props.timer(time)}
+        modeChange={(mode)=>this.props.modeChange(mode)}
       />
       </>  
       )
+  }
+}
+
+class Ending extends React.Component{
+  render(){
+    return(
+      <div className="ending-container">
+        <p>아이디 : {this.props.id}</p>
+        <p>난이도 : {this.props.level}</p>
+        <p>게임 진행시간 : {this.props.time}</p>
+        <button onClick={()=>this.props.modeChange(0)}>처음으로</button>
+      </div>
+    )  
   }
 }
 
@@ -482,28 +562,35 @@ class App extends React.Component{
       mine: 0,
       time: 0,
       gameState: "",
+      level: "",
     }
   }
   render(){
       if(this.state.mode === 0){
-        return <Level_select onChange={(mode,width,height,id,mine)=>this.setState({mode,width,height,id,mine})}/>;
+        return <Level_select onChange={(mode,width,height,id,mine,level)=>this.setState({mode,width,height,id,mine,level})}/>;
       }
       else if(this.state.mode === 1){
         return <Game 
                 width={this.state.width} 
                 height={this.state.height} 
                 mine={this.state.mine} 
-                time = {this.state.time}
+                time={this.state.time}
+                timer = {(time)=>this.setState({time})}
                 gameState={this.state.gameState}
                 gameStateChange={(gameState)=>this.setState({gameState})}
+                modeChange={(mode)=>this.setState({mode})}
                 />
       }
       else if(this.state.mode === 2){
-        return null;
+        return <Ending 
+                id={this.state.id}
+                time={this.state.time}
+                level={this.state.level}
+                modeChange={(mode)=>this.setState({mode})}
+               />;
       }
   }
 }
-
 
 
 
