@@ -34,13 +34,13 @@ class Level_select extends Component {
       this.info.innerText=info;
 
       if(this.state.game_level === "easy"){
-        this.props.onChange(1,9,9,id,9,"easy");
+        this.props.onChange(1,9,9,id,5,"easy");
       }
       else if(this.state.game_level === "normal"){
-        this.props.onChange(1,16,16,id,30,"normal");
+        this.props.onChange(1,16,16,id,15,"normal");
       }
       else if(this.state.game_level === "hard"){
-        this.props.onChange(1,30,16,id,100,"hard");
+        this.props.onChange(1,30,16,id,20,"hard");
       }
   }
 
@@ -187,6 +187,9 @@ class Board extends React.Component{
   }
 
   timer=()=>{
+    if(this.interval){
+      clearInterval(this.interval)
+    }
     let time = Date.now();
     this.interval = setInterval(()=>{
       const dt = Date.now()-time;  
@@ -274,6 +277,9 @@ class Board extends React.Component{
     //   square:[]
     // };
     this.setState(({square})=>{
+      if(square[i].open == true){
+        return;
+      }
       //루프용 클릭 횟수 count
       square[i].btnClickCount ++;
       
@@ -285,7 +291,7 @@ class Board extends React.Component{
         //깃발이랑 지뢰위치랑 일치하면 remainMines 감소시키고 remainMines가 0이 되면 게임 이김
         if(square[i].mine == true){
           this.state.remainMines--;
-          if(this.state.remainMines === 0){
+          if(this.state.remainMines === 0 && this.state.remainFlags>=0){
             clearInterval(this.interval);
             this.props.gameStateChange('gamewin')
           }
@@ -403,7 +409,7 @@ class Board extends React.Component{
     let bombPosition = getRandomInt(0, this.props.width*this.props.height);
     // 만약에 square에 폭탄이 들어가있으면 없을 때 까지 다시 위치 뽑기
     if(s.square[bombPosition].mine === true){
-      while(s.square[bombPosition].mine !== true){
+      while(s.square[bombPosition].mine === true){
         bombPosition = getRandomInt(0, this.props.width*this.props.height)
       }
     }
@@ -561,7 +567,15 @@ class RankTable extends React.Component{
     userRank.sort((a,b)=>{
       return a.time < b.time ? -1 : a.time > b.time ? 1: 0;
     })
-    console.log(userRank);
+    if(this.props.level == 'easy'){
+      userRank = userRank.filter(obj => obj.level == 'easy')
+    }
+    else if(this.props.level == 'normal'){
+      userRank = userRank.filter(obj => obj.level == 'normal')
+    }
+    else{
+      userRank = userRank.filter(obj => obj.level == 'hard')
+    }
     
     const content=[]
     for(let i=0; i<userRank.length;i++){
@@ -594,7 +608,7 @@ class Ending extends React.Component{
         <p>아이디 : {this.props.id}</p>
         <p>난이도 : {this.props.level}</p>
         <p>게임 진행시간 : {this.props.time}</p>
-        <RankTable/>
+        <RankTable level={this.props.level}/>
         <button onClick={()=>this.props.modeChange(0)}>처음으로</button>
       </div>
     )  
